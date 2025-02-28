@@ -2,18 +2,12 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Search } from "lucide-react";
 
-const Header = ({ isSidebarExpanded }) => {
+const Header = ({}) => {
   const location = useLocation();
 
   return (
     <header
-      className={`fixed top-0 transition-all duration-300 flex items-center justify-between bg-white px-6 py-3 z-10 shadow-md
-        ${
-          isSidebarExpanded
-            ? "lg:ml-64 lg:w-[calc(100%-256px)]"
-            : "lg:ml-16 lg:w-[calc(100%-64px)]"
-        }
-        w-full ml-0`}
+      className={`top-0 transition-all duration-300 flex items-center justify-between bg-white px-6 py-3 z-10 shadow-md w-full`}
     >
       {/* Menu Central */}
       <div className="flex-1 flex justify-center space-x-4 ">

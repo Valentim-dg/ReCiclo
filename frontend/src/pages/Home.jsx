@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import ModelGrid from "../components/ModelGrid";
 
-const Home = ({ isSidebarExpanded }) => {
+const Home = ({}) => {
   const [models, setModels] = useState([]);
 
   useEffect(() => {
@@ -14,8 +14,8 @@ const Home = ({ isSidebarExpanded }) => {
           userName: model.user?.handle || "Usuário",
           userHandle: model.user?.handle || "@usuario",
           userImage: model.user?.image || "/default-avatar.png",
-          name: model.name, // Agora garantimos que sempre terá um nome
-          image: model.image, // Garantimos que a imagem sempre será utilizada
+          name: model.name,
+          image: model.image,
           likes: model.likes || 0,
           downloads: model.downloads || 0,
           isLiked: model.is_liked,
@@ -62,12 +62,7 @@ const Home = ({ isSidebarExpanded }) => {
 
   return (
     <div
-      className={`min-h-screen p-6 bg-white-100 transition-all duration-300 overflow-x-hidden
-        ${
-          isSidebarExpanded
-            ? "lg:ml-64 lg:w-[calc(100%-256px)]"
-            : "lg:ml-16 lg:w-[calc(100%-64px)]"
-        }`}
+      className={`min-h-screen p-6 bg-white-100 transition-all duration-300 overflow-x-hidden `}
     >
       <header className="mb-6">
         <h1 className="text-3xl lg:text-4xl font-bold text-gray-800">

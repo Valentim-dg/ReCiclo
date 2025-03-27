@@ -9,20 +9,25 @@ const Home = ({}) => {
     const fetchModels = async () => {
       try {
         const response = await axios.get("http://127.0.0.1:8000/api/models3d/");
+        console.log("Resposta da API:", response.data);
+
         const transformedData = response.data.map((model) => ({
           id: model.id,
           userName: model.user?.handle || "Usuário",
-          userHandle: model.user?.handle || "@usuario",
+          userHandle: model.user?.handle || "usuario",
           userImage: model.user?.image || "/default-avatar.png",
           name: model.name,
-          image: model.image,
+          image:
+            model.images.length > 0
+              ? model.images[0].image
+              : "/placeholder.png",
           likes: model.likes || 0,
           downloads: model.downloads || 0,
           isLiked: model.is_liked,
           isSaved: model.is_saved,
         }));
 
-        setModels(transformedData);
+        console.log("Dados transformados:", transformedData);
 
         setModels(transformedData);
       } catch (error) {

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   FaHeart,
   FaRegHeart,
@@ -14,26 +15,47 @@ const ModelCard = ({ model }) => {
   const [isLiked, setIsLiked] = useState(model.isLiked);
   const [isSaved, setIsSaved] = useState(model.isSaved);
 
+  const token = localStorage.getItem("authToken");
+  const headers = token ? { Authorization: `Token ${token}` } : {};
+
   const handleLike = async () => {
+    if (!token) {
+      alert("Você precisa estar logado para curtir.");
+      return;
+    }
+
     try {
       const response = await axios.post(
-        `http://127.0.0.1:8000/api/models3d/${model.id}/like/`
+        `http://127.0.0.1:8000/api/models3d/${model.id}/like/`,
+        {},
+        { headers }
       );
-      setLikes((prevLikes) => (isLiked ? prevLikes - 1 : prevLikes + 1)); // Evita re-renders desnecessários
-      setIsLiked(response.data.is_liked);
+
+      setLikes(response.data.likes);
+      setIsLiked(!isLiked);
     } catch (error) {
       console.error("Erro ao curtir:", error);
+      alert("Erro ao curtir. Verifique se está logado.");
     }
   };
 
   const handleSave = async () => {
+    if (!token) {
+      alert("Você precisa estar logado para favoritar.");
+      return;
+    }
+
     try {
       const response = await axios.post(
-        `http://127.0.0.1:8000/api/models3d/${model.id}/save/`
+        `http://127.0.0.1:8000/api/models3d/${model.id}/save/`,
+        {},
+        { headers }
       );
-      setIsSaved(response.data.is_saved);
+
+      setIsSaved(response.data.saved);
     } catch (error) {
       console.error("Erro ao favoritar:", error);
+      alert("Erro ao favoritar. Verifique se está logado.");
     }
   };
 
@@ -41,67 +63,53 @@ const ModelCard = ({ model }) => {
     try {
       const response = await axios.get(
         `http://127.0.0.1:8000/api/models3d/${model.id}/download/`,
-        { responseType: "blob" }
+        { responseType: "blob", headers }
       );
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${model.name}.stl`; // Define um nome adequado para o download
+      a.download = model.name;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
 
-      setDownloads((prev) => prev + 1);
+      setDownloads(downloads + 1);
     } catch (error) {
       console.error("Erro ao registrar download:", error);
+      alert("Erro ao baixar o modelo.");
     }
   };
 
   return (
     <div className="bg-white rounded-lg shadow hover:shadow-lg transition duration-300 p-4 flex flex-col">
-      {/* User Info */}
-      <div className="flex items-center mb-4">
-        <img
-          src={model.userImage || "/default-avatar.png"}
-          alt={model.userName}
-          className="w-10 h-10 rounded-full mr-3 object-cover"
-          onError={(e) => {
-            e.target.src = "/default-avatar.png";
-          }} // Se falhar, usa um avatar padrão
-        />
-        <div className="truncate">
-          <h4 className="font-semibold text-gray-800">{model.userName}</h4>
-          <p className="text-sm text-gray-500 truncate">{model.userHandle}</p>
+      {/* Link para a página de detalhes do modelo */}
+      <Link to={`/models/${model.id}`} className="block">
+        {/* User Info */}
+        <div className="flex items-center mb-4">
+          <img
+            src={model.userImage || "/default-avatar.png"}
+            alt={model.userName}
+            className="w-10 h-10 rounded-full mr-3"
+          />
+          <div className="truncate">
+            <h4 className="font-semibold text-gray-800">{model.userName}</h4>
+            <p className="text-sm text-gray-500 truncate">{model.userHandle}</p>
+          </div>
         </div>
-      </div>
 
-      {/* Model Image */}
-      <div className="relative">
-        {model.image ? (
+        {/* Model Image */}
+        {model.image && (
           <img
             src={model.image}
             alt={model.name}
-            className="w-full h-48 md:h-56 lg:h-64 object-cover rounded-lg transition-transform duration-200 hover:scale-105"
-            onError={(e) => {
-              e.target.src = "/default-model.png";
-            }} // Se falhar, usa uma imagem padrão
+            className="w-full h-48 md:h-56 lg:h-64 object-cover rounded-lg mb-4 transition-transform duration-200 hover:scale-105"
           />
-        ) : (
-          <div className="w-full h-48 md:h-56 lg:h-64 bg-gray-200 flex items-center justify-center rounded-lg">
-            <p className="text-gray-500">Sem imagem</p>
-          </div>
         )}
-      </div>
-
-      {/* Model Name */}
-      <h3 className="text-lg font-bold text-gray-700 text-center mt-3">
-        {model.name}
-      </h3>
+      </Link>
 
       {/* Actions */}
-      <div className="flex justify-between items-center mt-4">
-        {/* Like */}
+      <div className="flex justify-between items-center mt-auto">
         <button
           onClick={handleLike}
           className={`flex items-center ${
@@ -112,7 +120,6 @@ const ModelCard = ({ model }) => {
           <span className="ml-2 text-sm">{likes}</span>
         </button>
 
-        {/* Download */}
         <button
           onClick={handleDownload}
           className="flex items-center text-blue-500 hover:text-blue-600"
@@ -121,7 +128,6 @@ const ModelCard = ({ model }) => {
           <span className="ml-2 text-sm">{downloads}</span>
         </button>
 
-        {/* Favorito */}
         <button
           onClick={handleSave}
           className={`flex items-center ${

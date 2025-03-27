@@ -13,8 +13,11 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from django.conf.urls.static import static
 from django.conf import settings
 from pathlib import Path
+from datetime import timedelta
 
 import os
+
+AUTH_USER_MODEL = "api.CustomUser"
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -47,9 +50,56 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'api.apps.ApiConfig',
-    'rest_framework',
     'corsheaders',
+    'django.contrib.sites',  # Necessário para allauth
+    'rest_framework',
+    'rest_framework.authtoken',
+    'dj_rest_auth',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',  # Provedor Google
+    'dj_rest_auth.registration',
+    'rest_framework_simplejwt.token_blacklist',
 ]
+
+# Configuração de Autenticação Padrão
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',  # Token Auth
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # JWT Auth
+        'rest_framework.authentication.SessionAuthentication',  # Permite login via sessão
+        'rest_framework.authentication.BasicAuthentication',  # Permite autenticação básica
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        # Permite acesso público
+        'rest_framework.permissions.AllowAny',
+    ),
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),  # Token expira em 1 dia
+    # Token de atualização dura 7 dias
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
+
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',  # Permite login social
+)
+
+ACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_EMAIL_VERIFICATION = "none"
+
+REST_USE_JWT = True
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -58,6 +108,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -137,3 +188,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Permitir todas as origens (não recomendado em produção)
 CORS_ALLOW_ALL_ORIGINS = True
+
+REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"] = list(REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"]) + [
+    "rest_framework_simplejwt.authentication.JWTAuthentication"
+]

@@ -106,6 +106,9 @@ const ModelCard = ({ model }) => {
             className="w-full h-48 md:h-56 lg:h-64 object-cover rounded-lg mb-4 transition-transform duration-200 hover:scale-105"
           />
         )}
+
+        {/* Nome do Modelo */}
+        <h3 className="mb-2 text-black-600 mt-2 truncate">{model.name}</h3>
       </Link>
 
       {/* Actions */}

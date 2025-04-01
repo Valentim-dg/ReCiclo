@@ -1,28 +1,43 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Search, PlusCircle, LogOut } from "lucide-react";
+import { Search, PlusCircle, LogOut, RefreshCcw } from "lucide-react";
 import ModelUploadModal from "./ModelUploadModal";
 import Form from "./Form";
+import RecycleModal from "./RecycleModal";
 
 const Header = ({ user, setUser, setModels }) => {
-  // const location = useLocation();
-
-  // Estados para modais
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isRecycleModalOpen, setIsRecycleModalOpen] = useState(false);
+
+  const dropdownRef = useRef(null); // Referência para o dropdown
+  const modalRef = useRef(null); // Referência para o modal
 
   // Função para logout
   const handleLogout = () => {
-    console.log("Fazendo logout...");
-
-    localStorage.removeItem("authToken"); // Remove o token do localStorage
-    localStorage.removeItem("user"); // Remove os dados do usuário
-
-    setUser(null); // Atualiza o estado global para refletir que o usuário saiu
-
-    console.log("Usuário desconectado!");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("user");
+    setUser(null);
   };
+
+  // Fecha o dropdown ou os modais ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        setIsLoginModalOpen(false);
+        setIsUploadModalOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   return (
     <header className="sticky top-0 flex items-center justify-between bg-white px-6 py-3 z-10 w-full">
@@ -59,9 +74,17 @@ const Header = ({ user, setUser, setModels }) => {
         </button>
       )}
 
+      {/* Botão de Reciclar */}
+      <button
+        className="px-4 py-2 bg-green-500 text-white rounded-md flex items-center hover:bg-green-600 transition mr-4"
+        onClick={() => setIsRecycleModalOpen(true)}
+      >
+        <RefreshCcw size={18} className="mr-2" /> Reciclar
+      </button>
+
       {/* Usuário Logado */}
       {user ? (
-        <div className="relative">
+        <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="flex items-center"
@@ -113,15 +136,25 @@ const Header = ({ user, setUser, setModels }) => {
 
       {/* Modais */}
       {isLoginModalOpen && (
-        <Form onClose={() => setIsLoginModalOpen(false)} setUser={setUser} />
+        <div ref={modalRef}>
+          <Form onClose={() => setIsLoginModalOpen(false)} setUser={setUser} />
+        </div>
       )}
       {isUploadModalOpen && (
-        <ModelUploadModal
-          closeModal={() => setIsUploadModalOpen(false)}
-          user={user}
-          setModels={setModels}
-        />
+        <div ref={modalRef}>
+          <ModelUploadModal
+            closeModal={() => setIsUploadModalOpen(false)}
+            user={user}
+            setModels={setModels}
+          />
+        </div>
       )}
+
+      {/* Modal de Reciclagem */}
+      <RecycleModal
+        isOpen={isRecycleModalOpen}
+        onClose={() => setIsRecycleModalOpen(false)}
+      />
     </header>
   );
 };

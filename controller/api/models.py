@@ -9,8 +9,8 @@ class CustomUser(AbstractUser):
     level = models.IntegerField(default=1)
     achievements = models.JSONField(default=list, blank=True)
     recycling_history = models.JSONField(default=list, blank=True)
-    profile_image = models.ImageField(upload_to="profile_images/", null=True, blank=True)
-
+    profile_image = models.ImageField(
+        upload_to="profile_images/", null=True, blank=True)
 
     groups = models.ManyToManyField(
         "auth.Group",
@@ -28,16 +28,16 @@ class CustomUser(AbstractUser):
 
 
 class Bottle(models.Model):
-    # Relaciona com o usuário padrão
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
                              on_delete=models.CASCADE)
     quantity = models.IntegerField()
-    # Ex: Tipo 1A: Marca 1, 2L ; Tipo 2C: Marca 2, 600ml
     type = models.CharField(max_length=100)
+    # Ex: "500ml", "1L", "2L"
+    volume = models.CharField(max_length=10, default=0)
     date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.type} - {self.quantity} garrafas"
+        return f"{self.type} - {self.quantity} garrafas de {self.volume}"
 
 
 class Model3D(models.Model):
@@ -64,12 +64,13 @@ class ModelFile(models.Model):
 
 
 class ModelImage(models.Model):
-    model3d = models.ForeignKey(Model3D, related_name="images", on_delete=models.CASCADE)  # 🔹 Adicionado related_name="images"
+    # 🔹 Adicionado related_name="images"
+    model3d = models.ForeignKey(
+        Model3D, related_name="images", on_delete=models.CASCADE)
     image = models.ImageField(upload_to="models3d/images/")
 
     def __str__(self):
         return f"Imagem para {self.model3d.name}"
-
 
 
 class ModelLike(models.Model):

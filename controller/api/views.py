@@ -1,5 +1,5 @@
 from rest_framework import viewsets, permissions
-from .models import Bottle, Model3D, ModelLike, ModelFavorite, Comment, ModelFile, ModelImage
+from .models import Bottle, Model3D, ModelLike, ModelFavorite, Comment, ModelFile, ModelImage, RecyclingHistory
 from .serializers import BottleSerializer, Model3DSerializer, CommentSerializer
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -14,6 +14,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import Model3DSerializer, UserSerializer
+from datetime import datetime
 
 
 class UserProfileView(APIView):
@@ -174,4 +175,56 @@ class UserDashboardView(APIView):
             "recyclingCoins": user.recycling_coins,  # Corrigido: Removido user.profile
             "reputationCoins": user.reputation_coins,
             "level": user.level,
+        })
+
+
+REWARD_TABLE = {
+    "350ml": 5,   # 5 moedas de reciclagem
+    "500ml": 7,
+    "1L": 10,
+    "1.5L": 15,
+    "2L": 20,
+    "3L": 25,
+}
+
+
+class RecycleView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        volume = request.data.get("volume")
+        quantity = int(request.data.get("quantity", 1))
+
+        # Calcular moedas de reciclagem e reputação
+        # Se não encontrado, usa 5 como padrão
+        base_reward = REWARD_TABLE.get(volume, 5)
+        recycling_coins = base_reward * quantity
+        reputation_coins = recycling_coins // 2  # Metade da reciclagem vira reputação
+
+        # Atualizar perfil do usuário
+        user.recycling_coins += recycling_coins
+        user.reputation_coins += reputation_coins
+        user.experience += recycling_coins  # Exp baseada nas moedas de reciclagem
+
+        # Calcular nível (Exemplo: a cada 100 pontos de experiência sobe 1 nível)
+        while user.experience >= user.level * 100:
+            user.experience -= user.level * 100
+            user.level += 1
+
+        user.save()
+        # Registrar histórico de reciclagem
+        today = datetime.today().strftime("%Y-%m")
+        history, _ = RecyclingHistory.objects.get_or_create(
+            user=user, month=today)
+        history.quantity += quantity
+        history.save()
+
+        return Response({
+            "message": "Reciclagem registrada com sucesso!",
+            "recyclingCoins": user.recycling_coins,
+            "reputationCoins": user.reputation_coins,
+            "level": user.level,
+            "experience": user.experience,
+            "recyclingHistory": history.quantity,
         })

@@ -7,6 +7,7 @@ class CustomUser(AbstractUser):
     recycling_coins = models.IntegerField(default=0)
     reputation_coins = models.IntegerField(default=0)
     level = models.IntegerField(default=1)
+    experience = models.IntegerField(default=0)
     achievements = models.JSONField(default=list, blank=True)
     recycling_history = models.JSONField(default=list, blank=True)
     profile_image = models.ImageField(
@@ -38,6 +39,21 @@ class Bottle(models.Model):
 
     def __str__(self):
         return f"{self.type} - {self.quantity} garrafas de {self.volume}"
+
+
+class RecyclingHistory(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+                             on_delete=models.CASCADE)
+    month = models.CharField(max_length=7)  # Exemplo: "2025-03"
+    # Número total de garrafas recicladas no mês
+    quantity = models.IntegerField(default=0)
+
+    class Meta:
+        # Para evitar múltiplos registros do mesmo mês
+        unique_together = ("user", "month")
+
+    def __str__(self):
+        return f"{self.user.username} - {self.month}: {self.quantity} garrafas recicladas"
 
 
 class Model3D(models.Model):

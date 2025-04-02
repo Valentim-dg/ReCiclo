@@ -4,7 +4,7 @@ import axios from "axios";
 const brands = ["Coca-Cola", "Fanta", "Pepsi", "Sprite", "Guaraná", "Outro"];
 const volumes = ["350ml", "500ml", "1L", "1.5L", "2L", "3L", "Outro"];
 
-const RecycleModal = ({ isOpen, onClose }) => {
+const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
   const [bottleType, setBottleType] = useState("");
   const [customBottleType, setCustomBottleType] = useState("");
   const [volume, setVolume] = useState("");
@@ -12,10 +12,19 @@ const RecycleModal = ({ isOpen, onClose }) => {
   const [quantity, setQuantity] = useState(1);
   const [message, setMessage] = useState({ text: "", type: "" });
 
+  const resetForm = () => {
+    setBottleType("");
+    setCustomBottleType("");
+    setVolume("");
+    setCustomVolume("");
+    setQuantity(1);
+    setMessage({ text: "", type: "" });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("authToken");
 
+    const token = localStorage.getItem("authToken");
     if (!token) {
       setMessage({
         text: "Você precisa estar logado para reciclar.",
@@ -39,7 +48,16 @@ const RecycleModal = ({ isOpen, onClose }) => {
         text: "Reciclagem registrada com sucesso!",
         type: "success",
       });
-      setTimeout(onClose, 2000);
+
+      // Aguarda 2 segundos antes de fechar e limpar
+      setTimeout(() => {
+        // Check if updateDashboard exists before calling it
+        if (typeof updateDashboard === "function") {
+          updateDashboard(); // Atualiza o dashboard após o POST
+        }
+        resetForm();
+        onClose();
+      }, 2000);
     } catch (error) {
       setMessage({ text: "Erro ao registrar a reciclagem.", type: "error" });
     }

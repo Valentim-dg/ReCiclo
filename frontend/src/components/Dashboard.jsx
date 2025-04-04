@@ -1,4 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, {
+  useState,
+  useEffect,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import { FaRecycle, FaStar, FaTrophy } from "react-icons/fa";
 import axios from "axios";
 import { Bar } from "react-chartjs-2";
@@ -22,16 +27,19 @@ ChartJS.register(
   Legend
 );
 
-const Dashboard = ({ user }) => {
+const Dashboard = forwardRef(({ user }, ref) => {
   const [recyclingCoins, setRecyclingCoins] = useState(0);
   const [reputationCoins, setReputationCoins] = useState(0);
   const [level, setLevel] = useState(1);
-  const [recyclingHistory, setRecyclingHistory] = useState([]);
+  const [recyclingHistory, setRecyclingHistory] = useState(Array(12).fill(0));
   const [achievements, setAchievements] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Define updateDashboard como uma função usando useCallback para prevenir re-renderizações desnecessárias
   const updateDashboard = React.useCallback(() => {
     if (user) {
+      setIsLoading(true);
       const token = localStorage.getItem("authToken");
 
       axios
@@ -42,14 +50,26 @@ const Dashboard = ({ user }) => {
           setRecyclingCoins(response.data.recyclingCoins);
           setReputationCoins(response.data.reputationCoins);
           setLevel(response.data.level);
-          setRecyclingHistory(response.data.recyclingHistory || []);
+
+          // Garantir que sempre tenhamos um array de 12 elementos
+          const historyData =
+            response.data.recyclingHistory || Array(12).fill(0);
+          setRecyclingHistory(historyData);
+
           setAchievements(response.data.achievements || []);
+          setIsLoading(false);
         })
-        .catch((error) =>
-          console.error("Erro ao atualizar o dashboard:", error)
-        );
+        .catch((error) => {
+          console.error("Erro ao atualizar o dashboard:", error);
+          setIsLoading(false);
+        });
     }
   }, [user]);
+
+  // Expor a função updateDashboard através da ref
+  useImperativeHandle(ref, () => ({
+    updateDashboard,
+  }));
 
   useEffect(() => {
     if (user) {
@@ -57,24 +77,26 @@ const Dashboard = ({ user }) => {
     }
   }, [user, updateDashboard]);
 
+  const months = [
+    "Jan",
+    "Fev",
+    "Mar",
+    "Abr",
+    "Mai",
+    "Jun",
+    "Jul",
+    "Ago",
+    "Set",
+    "Out",
+    "Nov",
+    "Dez",
+  ];
+
   const recyclingData = {
-    labels: [
-      "Jan",
-      "Fev",
-      "Mar",
-      "Abr",
-      "Mai",
-      "Jun",
-      "Jul",
-      "Ago",
-      "Set",
-      "Out",
-      "Nov",
-      "Dez",
-    ],
+    labels: months,
     datasets: [
       {
-        label: "Reciclagem (g)",
+        label: "Garrafas Recicladas",
         data: recyclingHistory,
         backgroundColor: "rgba(34, 197, 94, 0.7)",
         borderColor: "rgba(34, 197, 94, 1)",
@@ -84,21 +106,36 @@ const Dashboard = ({ user }) => {
     ],
   };
 
+  // Determinando automaticamente o valor máximo para o eixo Y
+  const maxValue = Math.max(...recyclingHistory, 10); // Mínimo de 10 para não ficar vazio
+  const yMax = Math.ceil(maxValue / 50) * 50 + 50; // Arredonda para cima ao múltiplo de 50 mais próximo e adiciona 50
+
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: function (context) {
+            return `${context.parsed.y} garrafas`;
+          },
+        },
+      },
     },
     scales: {
       x: {
         grid: { display: false },
       },
       y: {
-        min: 50,
-        max: 1000,
-        ticks: { stepSize: 50 },
-        grid: { display: false },
+        min: 0,
+        max: yMax,
+        ticks: { stepSize: Math.max(10, Math.floor(yMax / 10)) },
+        grid: { color: "rgba(0, 0, 0, 0.05)" },
+        title: {
+          display: true,
+          text: "Quantidade de Garrafas",
+        },
       },
     },
   };
@@ -138,9 +175,15 @@ const Dashboard = ({ user }) => {
       <div className="flex flex-col md:flex-row gap-6">
         <div className="bg-white p-6 rounded-lg shadow-lg w-full md:w-2/3">
           <h3 className="text-lg font-semibold mb-3">Reciclagem Mensal</h3>
-          <div className="h-64">
-            <Bar data={recyclingData} options={chartOptions} />
-          </div>
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+            </div>
+          ) : (
+            <div className="h-64">
+              <Bar data={recyclingData} options={chartOptions} />
+            </div>
+          )}
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-lg w-full md:w-1/3">
@@ -169,14 +212,8 @@ const Dashboard = ({ user }) => {
           </ul>
         </div>
       </div>
-
-      <RecycleModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        updateDashboard={updateDashboard}
-      />
     </div>
   );
-};
+});
 
 export default Dashboard;

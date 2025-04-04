@@ -11,6 +11,7 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
   const [customVolume, setCustomVolume] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [message, setMessage] = useState({ text: "", type: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const resetForm = () => {
     setBottleType("");
@@ -19,10 +20,12 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
     setCustomVolume("");
     setQuantity(1);
     setMessage({ text: "", type: "" });
+    setIsSubmitting(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     const token = localStorage.getItem("authToken");
     if (!token) {
@@ -30,6 +33,7 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
         text: "Você precisa estar logado para reciclar.",
         type: "error",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -39,7 +43,7 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
         {
           type: bottleType === "Outro" ? customBottleType : bottleType,
           volume: volume === "Outro" ? customVolume : volume,
-          quantity,
+          quantity: Number(quantity),
         },
         { headers: { Authorization: `Token ${token}` } }
       );
@@ -51,7 +55,6 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
 
       // Aguarda 2 segundos antes de fechar e limpar
       setTimeout(() => {
-        // Check if updateDashboard exists before calling it
         if (typeof updateDashboard === "function") {
           updateDashboard(); // Atualiza o dashboard após o POST
         }
@@ -59,7 +62,13 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
         onClose();
       }, 2000);
     } catch (error) {
-      setMessage({ text: "Erro ao registrar a reciclagem.", type: "error" });
+      console.error("Erro ao registrar reciclagem:", error);
+      setMessage({
+        text:
+          error.response?.data?.message || "Erro ao registrar a reciclagem.",
+        type: "error",
+      });
+      setIsSubmitting(false);
     }
   };
 
@@ -67,7 +76,7 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
+      className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
       onClick={onClose}
     >
       <div
@@ -78,6 +87,7 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
         <button
           className="absolute top-2 right-2 text-gray-500 hover:text-red-500"
           onClick={onClose}
+          disabled={isSubmitting}
         >
           ✖
         </button>
@@ -105,6 +115,7 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
               value={bottleType}
               onChange={(e) => setBottleType(e.target.value)}
               required
+              disabled={isSubmitting}
             >
               <option value="">Selecione</option>
               {brands.map((brand) => (
@@ -121,6 +132,8 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
               placeholder="Digite a marca"
               value={customBottleType}
               onChange={(e) => setCustomBottleType(e.target.value)}
+              disabled={isSubmitting}
+              required
             />
           )}
 
@@ -131,6 +144,7 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
               value={volume}
               onChange={(e) => setVolume(e.target.value)}
               required
+              disabled={isSubmitting}
             >
               <option value="">Selecione</option>
               {volumes.map((vol) => (
@@ -147,6 +161,8 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
               placeholder="Digite o volume"
               value={customVolume}
               onChange={(e) => setCustomVolume(e.target.value)}
+              disabled={isSubmitting}
+              required
             />
           )}
 
@@ -157,16 +173,48 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
               className="w-full p-2 border rounded mt-2"
               min="1"
               value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
+              onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
               required
+              disabled={isSubmitting}
             />
           </label>
 
           <button
             type="submit"
-            className="w-full px-4 py-2 bg-green-500 text-white rounded mt-4 hover:bg-green-600 transition"
+            className={`w-full px-4 py-2 text-white rounded mt-4 transition ${
+              isSubmitting
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-green-500 hover:bg-green-600"
+            }`}
+            disabled={isSubmitting}
           >
-            Reciclar
+            {isSubmitting ? (
+              <span className="flex items-center justify-center">
+                <svg
+                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Processando...
+              </span>
+            ) : (
+              "Reciclar"
+            )}
           </button>
         </form>
       </div>

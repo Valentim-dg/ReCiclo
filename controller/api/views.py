@@ -15,6 +15,11 @@ from django.contrib.auth.hashers import make_password
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import Model3DSerializer, UserSerializer
 from datetime import datetime
+from django.db.models import Sum
+from datetime import datetime
+import calendar
+from rest_framework.decorators import api_view, permission_classes
+from django.http import JsonResponse
 
 
 class UserProfileView(APIView):
@@ -171,10 +176,39 @@ class UserDashboardView(APIView):
         """Retorna os dados do usuário para o dashboard"""
         user = request.user  # O usuário autenticado já é um CustomUser
 
+        # Add recycling history data - similar to get_dashboard_data
+        recycling_data = [0] * 12
+        current_year = datetime.now().year
+
+        monthly_records = RecyclingHistory.objects.filter(
+            user=user,
+            month__startswith=f"{current_year}-"
+        )
+
+        for record in monthly_records:
+            month_str = record.month.split('-')[1]  # Extrair "MM" de "YYYY-MM"
+            month_index = int(month_str) - 1  # Ajustar para índice 0-11
+            recycling_data[month_index] = record.quantity
+
+        # If no records, calculate from bottles
+        if sum(recycling_data) == 0:
+            for month in range(1, 13):
+                month_str = f"{current_year}-{month:02d}"
+                start_date = f"{month_str}-01"
+                last_day = calendar.monthrange(current_year, month)[1]
+                end_date = f"{month_str}-{last_day}"
+                bottles_count = Bottle.objects.filter(
+                    user=user,
+                    date__range=[start_date, end_date]
+                ).aggregate(total=Sum('quantity'))['total'] or 0
+                recycling_data[month-1] = bottles_count
+
         return Response({
-            "recyclingCoins": user.recycling_coins,  # Corrigido: Removido user.profile
+            "recyclingCoins": user.recycling_coins,
             "reputationCoins": user.reputation_coins,
             "level": user.level,
+            "recyclingHistory": recycling_data,
+            "achievements": user.achievements,
         })
 
 
@@ -228,3 +262,112 @@ class RecycleView(APIView):
             "experience": user.experience,
             "recyclingHistory": history.quantity,
         })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_dashboard_data(request):
+    user = request.user
+
+    # Obter os dados de recycling_history
+    recycling_data = [0] * 12  # Inicializa com 0 para cada mês
+
+    # Obter ano atual
+    current_year = datetime.now().year
+
+    # Buscar os registros de RecyclingHistory do usuário para o ano atual
+    monthly_records = RecyclingHistory.objects.filter(
+        user=user,
+        month__startswith=f"{current_year}-"
+    )
+
+    # Preencher os dados mensais
+    for record in monthly_records:
+        month_str = record.month.split('-')[1]  # Extrair "MM" de "YYYY-MM"
+        month_index = int(month_str) - 1  # Ajustar para índice 0-11
+        recycling_data[month_index] = record.quantity
+
+    # Alternativamente, podemos calcular diretamente das garrafas recicladas
+    # caso não existam registros em RecyclingHistory
+    if sum(recycling_data) == 0:
+        for month in range(1, 13):
+            month_str = f"{current_year}-{month:02d}"
+            start_date = f"{month_str}-01"
+
+            # Determinar o último dia do mês
+            last_day = calendar.monthrange(current_year, month)[1]
+            end_date = f"{month_str}-{last_day}"
+
+            # Contar garrafas recicladas no mês
+            bottles_count = Bottle.objects.filter(
+                user=user,
+                date__range=[start_date, end_date]
+            ).aggregate(total=Sum('quantity'))['total'] or 0
+
+            recycling_data[month-1] = bottles_count
+
+    # Obter conquistas e outros dados relevantes
+    achievements = user.achievements
+
+    print("Recycling data:", recycling_data)
+
+    return JsonResponse({
+        'recyclingCoins': user.recycling_coins,
+        'reputationCoins': user.reputation_coins,
+        'level': user.level,
+        'recyclingHistory': recycling_data,
+        'achievements': achievements
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def recycle_bottles(request):
+    user = request.user
+    bottle_type = request.data.get('type')
+    volume = request.data.get('volume')
+    quantity = int(request.data.get('quantity', 1))
+
+    # Criar registro de garrafa
+    bottle = Bottle.objects.create(
+        user=user,
+        type=bottle_type,
+        volume=volume,
+        quantity=quantity
+    )
+
+    # Atualizar moedas e experiência do usuário
+    coins_per_bottle = 10  # Você pode ajustar conforme sua lógica de negócio
+    user.recycling_coins += quantity * coins_per_bottle
+    user.experience += quantity * 5
+
+    # Verificar se o usuário subiu de nível
+    level_threshold = user.level * 100
+    if user.experience >= level_threshold:
+        user.level += 1
+        # Adicionar conquista se for o primeiro nível ganho
+        if user.level == 2 and not any(a.get('title') == 'Primeiro Nível' for a in user.achievements):
+            user.achievements.append({
+                'title': 'Primeiro Nível',
+                'description': 'Você alcançou o nível 2!'
+            })
+
+    # Atualizar RecyclingHistory
+    current_month = datetime.now().strftime('%Y-%m')
+    history, created = RecyclingHistory.objects.get_or_create(
+        user=user,
+        month=current_month,
+        defaults={'quantity': 0}
+    )
+    history.quantity += quantity
+    history.save()
+
+    # Salvar usuário
+    user.save()
+
+    return JsonResponse({
+        'success': True,
+        'message': 'Reciclagem registrada com sucesso!',
+        'recyclingCoins': user.recycling_coins,
+        'level': user.level
+    })

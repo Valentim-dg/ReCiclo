@@ -4,8 +4,9 @@ import { Search, PlusCircle, LogOut, RefreshCcw } from "lucide-react";
 import ModelUploadModal from "./ModelUploadModal";
 import Form from "./Form";
 import RecycleModal from "./RecycleModal";
+import { FaRecycle } from "react-icons/fa";
 
-const Header = ({ user, setUser, setModels }) => {
+const Header = ({ user, setUser, setModels, updateDashboard }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -79,7 +80,7 @@ const Header = ({ user, setUser, setModels }) => {
         className="px-4 py-2 bg-green-500 text-white rounded-md flex items-center hover:bg-green-600 transition mr-4"
         onClick={() => setIsRecycleModalOpen(true)}
       >
-        <RefreshCcw size={18} className="mr-2" /> Reciclar
+        <FaRecycle size={18} className="mr-2" /> Reciclar
       </button>
 
       {/* Usuário Logado */}
@@ -154,6 +155,7 @@ const Header = ({ user, setUser, setModels }) => {
       <RecycleModal
         isOpen={isRecycleModalOpen}
         onClose={() => setIsRecycleModalOpen(false)}
+        updateDashboard={updateDashboard}
       />
     </header>
   );

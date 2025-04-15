@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { FaTrophy, FaArrowUp } from "react-icons/fa";
 
 const brands = ["Coca-Cola", "Fanta", "Pepsi", "Sprite", "Guaraná", "Outro"];
 const volumes = ["350ml", "500ml", "1L", "1.5L", "2L", "3L", "Outro"];
@@ -12,6 +13,9 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
   const [quantity, setQuantity] = useState(1);
   const [message, setMessage] = useState({ text: "", type: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newAchievements, setNewAchievements] = useState([]);
+  const [showNewAchievements, setShowNewAchievements] = useState(false);
+  const [levelUp, setLevelUp] = useState(null);
 
   const resetForm = () => {
     setBottleType("");
@@ -21,6 +25,9 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
     setQuantity(1);
     setMessage({ text: "", type: "" });
     setIsSubmitting(false);
+    setNewAchievements([]);
+    setShowNewAchievements(false);
+    setLevelUp(null);
   };
 
   const handleSubmit = async (e) => {
@@ -38,8 +45,9 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
     }
 
     try {
-      await axios.post(
-        "http://127.0.0.1:8000/api/recycle/",
+      console.log("Enviando dados para a API..."); // Log para verificar o início da requisição
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/recycle/bottles/",
         {
           type: bottleType === "Outro" ? customBottleType : bottleType,
           volume: volume === "Outro" ? customVolume : volume,
@@ -48,21 +56,56 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
         { headers: { Authorization: `Token ${token}` } }
       );
 
+      console.log("Resposta da API:", response.data); // Log para verificar a resposta da API
+
       setMessage({
         text: "Reciclagem registrada com sucesso!",
         type: "success",
       });
 
-      // Aguarda 2 segundos antes de fechar e limpar
-      setTimeout(() => {
-        if (typeof updateDashboard === "function") {
-          updateDashboard(); // Atualiza o dashboard após o POST
-        }
-        resetForm();
-        onClose();
-      }, 2000);
+      if (typeof updateDashboard === "function") {
+        updateDashboard(); // Atualiza o dashboard logo após o POST
+      }
+
+      // Verificar se o usuário subiu de nível
+      const userData = JSON.parse(localStorage.getItem("user")) || {};
+      const oldLevel = userData.level || 1;
+      const newLevel = response.data.level;
+
+      console.log("Nível antigo:", oldLevel, "Novo nível:", newLevel); // Log para verificar os níveis
+
+      if (newLevel > oldLevel) {
+        setLevelUp(newLevel);
+
+        // Atualizar o nível no localStorage
+        userData.level = newLevel;
+        localStorage.setItem("user", JSON.stringify(userData));
+      }
+
+      // Verifica se há novas conquistas
+      if (
+        response.data.new_achievements &&
+        response.data.new_achievements.length > 0
+      ) {
+        console.log(
+          "Novas conquistas recebidas:",
+          response.data.new_achievements
+        ); // Log para verificar as conquistas recebidas
+        setNewAchievements(response.data.new_achievements);
+        setShowNewAchievements(true);
+      } else {
+        console.log("Nenhuma nova conquista desbloqueada."); // Log para verificar quando não há conquistas
+        // Se não há novas conquistas, aguarda e fecha
+        setTimeout(() => {
+          if (typeof updateDashboard === "function") {
+            updateDashboard(); // Atualiza o dashboard após o POST
+          }
+          resetForm();
+          onClose();
+        }, 2000);
+      }
     } catch (error) {
-      console.error("Erro ao registrar reciclagem:", error);
+      console.error("Erro ao registrar reciclagem:", error); // Log para verificar erros
       setMessage({
         text:
           error.response?.data?.message || "Erro ao registrar a reciclagem.",
@@ -72,8 +115,71 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
     }
   };
 
+  const handleCloseAchievements = () => {
+    setShowNewAchievements(false);
+    // Atualiza o dashboard após fechar o modal de conquistas
+    if (typeof updateDashboard === "function") {
+      updateDashboard();
+    }
+    setTimeout(() => {
+      resetForm();
+      onClose();
+    }, 500);
+  };
+
   if (!isOpen) return null;
 
+  // Modal de novas conquistas
+  if (showNewAchievements) {
+    return (
+      <div
+        className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+        onClick={handleCloseAchievements}
+      >
+        <div
+          className="bg-white p-6 rounded-lg shadow-lg w-96 relative"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h2 className="text-xl font-semibold mb-4 text-center">
+            Novas Conquistas Desbloqueadas!
+          </h2>
+
+          <ul className="space-y-3 my-4">
+            {newAchievements.map((achievement, index) => (
+              <li
+                key={index}
+                className="bg-green-50 p-4 rounded-lg flex items-start"
+              >
+                <div className="text-yellow-500 mr-3 mt-1">
+                  <FaTrophy size={24} />
+                </div>
+                <div>
+                  <p className="font-bold text-green-700">
+                    {achievement.title}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {achievement.description}
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">
+                    +10 moedas de reputação
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <button
+            className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+            onClick={handleCloseAchievements}
+          >
+            Continuar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Modal principal de reciclagem
   return (
     <div
       className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
@@ -217,6 +323,47 @@ const RecycleModal = ({ isOpen, onClose, updateDashboard }) => {
             )}
           </button>
         </form>
+      </div>
+
+      {/* Notificação de Level Up (renderizada condicionalmente) */}
+      {levelUp && (
+        <LevelUpNotification
+          newLevel={levelUp}
+          onClose={() => setLevelUp(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+const LevelUpNotification = ({ newLevel, onClose }) => {
+  const [isVisible, setIsVisible] = useState(true);
+
+  React.useEffect(() => {
+    // Fechar automaticamente após 5 segundos
+    const timer = setTimeout(() => {
+      setIsVisible(false);
+      setTimeout(() => {
+        if (onClose) onClose();
+      }, 500);
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  if (!isVisible) return null;
+
+  return (
+    <div
+      className="fixed bottom-6 right-6 bg-yellow-400 text-yellow-900 p-4 rounded-lg shadow-lg
+                 flex items-center animate-bounce z-50 max-w-xs"
+    >
+      <div className="bg-yellow-300 rounded-full p-3 mr-3">
+        <FaArrowUp className="text-yellow-600 text-xl" />
+      </div>
+      <div>
+        <h3 className="font-bold text-lg">Nível Aumentado!</h3>
+        <p>Parabéns! Você alcançou o nível {newLevel}.</p>
       </div>
     </div>
   );

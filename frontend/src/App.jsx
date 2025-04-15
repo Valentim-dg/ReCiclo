@@ -1,16 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-// import Sidebar, { SidebarItem } from "./components/Sidebar";
 import Header from "./components/Header";
 import Home from "./pages/Home";
 import ModelDetails from "./pages/ModelDetails";
 import Dashboard from "./pages/Dashboard";
-// import LevelUpNotification from "./components/LevelUpNotification";
 
 const App = () => {
   const [user, setUser] = useState(null);
   const [models, setModels] = useState([]);
-  // const [levelUpNotification, setLevelUpNotification] = useState(null);
 
   // Referência para a função updateDashboard
   const dashboardUpdateRef = useRef(null);
@@ -33,7 +30,6 @@ const App = () => {
   // Função para verificar e atualizar nível do usuário
   const checkAndUpdateLevel = (updatedUser) => {
     if (user && updatedUser && updatedUser.level > user.level) {
-      // setLevelUpNotification(updatedUser.level);
     }
 
     // Atualiza o usuário no estado e no localStorage

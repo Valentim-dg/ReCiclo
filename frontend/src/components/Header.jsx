@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Search, PlusCircle, LogOut, RefreshCcw } from "lucide-react";
+import { Search, PlusCircle, LogOut } from "lucide-react";
 import ModelUploadModal from "./ModelUploadModal";
 import Form from "./Form";
 import RecycleModal from "./RecycleModal";
 import { FaRecycle } from "react-icons/fa";
+// import LevelUpNotification from "./LevelUpNotification";
 
 const Header = ({ user, setUser, setModels, updateDashboard }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -39,6 +40,13 @@ const Header = ({ user, setUser, setModels, updateDashboard }) => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Função para atualizar o dashboard após a reciclagem
+  const handleDashboardUpdate = () => {
+    if (typeof updateDashboard === "function") {
+      updateDashboard();
+    }
+  };
 
   return (
     <header className="sticky top-0 flex items-center justify-between bg-white px-6 py-3 z-10 w-full">
@@ -155,7 +163,7 @@ const Header = ({ user, setUser, setModels, updateDashboard }) => {
       <RecycleModal
         isOpen={isRecycleModalOpen}
         onClose={() => setIsRecycleModalOpen(false)}
-        updateDashboard={updateDashboard}
+        updateDashboard={handleDashboardUpdate}
       />
     </header>
   );

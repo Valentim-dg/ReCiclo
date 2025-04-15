@@ -14,7 +14,7 @@ urlpatterns = [
     path("auth/register/", register_user, name="register"),
     path("user/dashboard/", UserDashboardView.as_view(), name="user-dashboard"),
     path("auth/user/", UserProfileView.as_view(), name="user-profile"),
-    path("recycle/", RecycleView.as_view(), name="recycle_bottles"),
+    path("recycle/bottles/", RecycleView.as_view(), name="recycle_bottles"),
 
     # Rotas de autenticação
     path('auth/', include('dj_rest_auth.urls')),

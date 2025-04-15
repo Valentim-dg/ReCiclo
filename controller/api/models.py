@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.conf import settings
+import datetime
 
 
 class CustomUser(AbstractUser):
@@ -26,6 +27,35 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.username
+
+    def add_achievement(self, achievement_id, title, description):
+        """
+        Adiciona uma conquista ao usuário se ela ainda não existir
+        """
+        # Verifica se a conquista já existe
+        achievement_exists = False
+        for achievement in self.achievements:
+            if achievement.get('id') == achievement_id:
+                achievement_exists = True
+                # Se existe mas não está desbloqueada, atualiza
+                if not achievement.get('unlocked', False):
+                    achievement['unlocked'] = True
+                    self.reputation_coins += 10  # Bônus por conquista
+                break
+
+        # Se não existe, adiciona
+        if not achievement_exists:
+            self.achievements.append({
+                'id': achievement_id,
+                'title': title,
+                'description': description,
+                'unlocked': True,
+                'date_unlocked': datetime.datetime.now().isoformat()
+            })
+            self.reputation_coins += 10  # Bônus por conquista
+
+        self.save()
+        return not achievement_exists  # Retorna True se foi uma nova conquista
 
 
 class Bottle(models.Model):
@@ -80,7 +110,6 @@ class ModelFile(models.Model):
 
 
 class ModelImage(models.Model):
-    # 🔹 Adicionado related_name="images"
     model3d = models.ForeignKey(
         Model3D, related_name="images", on_delete=models.CASCADE)
     image = models.ImageField(upload_to="models3d/images/")

@@ -4,11 +4,13 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
 import Home from "./pages/Home";
 import ModelDetails from "./pages/ModelDetails";
-import Dashboard from "./components/Dashboard";
+import Dashboard from "./pages/Dashboard";
+// import LevelUpNotification from "./components/LevelUpNotification";
 
 const App = () => {
   const [user, setUser] = useState(null);
   const [models, setModels] = useState([]);
+  // const [levelUpNotification, setLevelUpNotification] = useState(null);
 
   // Referência para a função updateDashboard
   const dashboardUpdateRef = useRef(null);
@@ -28,6 +30,17 @@ const App = () => {
     }
   }, []);
 
+  // Função para verificar e atualizar nível do usuário
+  const checkAndUpdateLevel = (updatedUser) => {
+    if (user && updatedUser && updatedUser.level > user.level) {
+      // setLevelUpNotification(updatedUser.level);
+    }
+
+    // Atualiza o usuário no estado e no localStorage
+    setUser(updatedUser);
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+  };
+
   return (
     <Router>
       <div className="flex min-h-screen w-full">
@@ -36,7 +49,7 @@ const App = () => {
           {/* Header no topo */}
           <Header
             user={user}
-            setUser={setUser}
+            setUser={checkAndUpdateLevel}
             setModels={setModels}
             updateDashboard={updateDashboardFromHeader}
           />
@@ -47,7 +60,7 @@ const App = () => {
               path="/"
               element={<Home user={user} setModels={setModels} />}
             />
-            <Route path="/models/:id" element={<ModelDetails />} />
+            <Route path="/models/:id" element={<ModelDetails user={user} />} />
             <Route
               path="/dashboard"
               element={
@@ -59,6 +72,7 @@ const App = () => {
                       dashboardUpdateRef.current = dashboard.updateDashboard;
                     }
                   }}
+                  onUserUpdate={checkAndUpdateLevel}
                 />
               }
             />
@@ -72,6 +86,7 @@ const App = () => {
                       dashboardUpdateRef.current = dashboard.updateDashboard;
                     }
                   }}
+                  onUserUpdate={checkAndUpdateLevel}
                 />
               }
             />

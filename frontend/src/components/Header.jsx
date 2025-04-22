@@ -5,16 +5,15 @@ import ModelUploadModal from "./ModelUploadModal";
 import Form from "./Form";
 import RecycleModal from "./RecycleModal";
 import { FaRecycle } from "react-icons/fa";
-// import LevelUpNotification from "./LevelUpNotification";
 
-const Header = ({ user, setUser, setModels, updateDashboard }) => {
+const Header = ({ user, setUser, setModels, updateDashboard, fetchModels }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isRecycleModalOpen, setIsRecycleModalOpen] = useState(false);
 
-  const dropdownRef = useRef(null); // Referência para o dropdown
-  const modalRef = useRef(null); // Referência para o modal
+  const dropdownRef = useRef(null);
+  const modalRef = useRef(null);
 
   // Função para logout
   const handleLogout = () => {
@@ -45,6 +44,11 @@ const Header = ({ user, setUser, setModels, updateDashboard }) => {
   const handleDashboardUpdate = () => {
     if (typeof updateDashboard === "function") {
       updateDashboard();
+    }
+
+    // Também atualiza a lista de modelos
+    if (typeof fetchModels === "function") {
+      fetchModels();
     }
   };
 
@@ -149,12 +153,15 @@ const Header = ({ user, setUser, setModels, updateDashboard }) => {
           <Form onClose={() => setIsLoginModalOpen(false)} setUser={setUser} />
         </div>
       )}
+
+      {/* Modal de Upload de Modelo */}
       {isUploadModalOpen && (
         <div ref={modalRef}>
           <ModelUploadModal
             closeModal={() => setIsUploadModalOpen(false)}
             user={user}
             setModels={setModels}
+            fetchModels={fetchModels}
           />
         </div>
       )}

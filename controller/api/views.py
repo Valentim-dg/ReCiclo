@@ -119,21 +119,33 @@ class CommentViewSet(viewsets.ModelViewSet):
 
 
 class ModelUploadView(APIView):
-    """View para upload de modelos 3D"""
+    """View para upload de modelos 3D com múltiplos arquivos e imagens"""
     parser_classes = (MultiPartParser, FormParser)
-    # Apenas usuários autenticados podem enviar modelos
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, format=None):
-        """Recebe e processa o upload de arquivos"""
+        """Recebe e processa o upload de múltiplos arquivos e imagens"""
         user = request.user
         name = request.data.get("name")
         description = request.data.get("description")
-        file = request.FILES.get("file")  # Apenas um arquivo
-        image = request.FILES.get("image")  # Apenas uma imagem (opcional)
 
-        if not name or not description or not file:
+        # Verificar se existem dados obrigatórios
+        if not name or not description:
             return Response({"error": "Preencha todos os campos obrigatórios."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verificar se há pelo menos um arquivo e uma imagem
+        # Obter todos os arquivos enviados com o nome 'file'
+        files = request.FILES.getlist('file')
+        # Obter todas as imagens enviadas com o nome 'image'
+        images = request.FILES.getlist('image')
+
+        if not files:
+            return Response({"error": "É necessário enviar pelo menos um arquivo de modelo."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        if not images:
+            return Response({"error": "É necessário enviar pelo menos uma imagem do modelo."},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         # Criar o modelo 3D
         model_3d = Model3D.objects.create(
@@ -142,16 +154,24 @@ class ModelUploadView(APIView):
             description=description
         )
 
-        # Salvar o arquivo STL
-        ModelFile.objects.create(
-            model=model_3d, file=file, file_name=file.name
-        )
+        # Processar os arquivos
+        for file in files:
+            ModelFile.objects.create(
+                model=model_3d,
+                file=file,
+                file_name=file.name
+            )
 
-        # Salvar a imagem, se houver
-        if image:
-            ModelImage.objects.create(model3d=model_3d, image=image)
+        # Processar as imagens
+        for image in images:
+            ModelImage.objects.create(
+                model3d=model_3d,
+                image=image
+            )
 
-        return Response({"message": "Modelo enviado com sucesso!"}, status=status.HTTP_201_CREATED)
+        # Serializar o modelo para a resposta
+        serializer = Model3DSerializer(model_3d)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])

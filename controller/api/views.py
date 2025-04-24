@@ -521,27 +521,21 @@ def check_achievements(user):
         }
     ]
 
-    # Obtém estatísticas do usuário
-    bottles_query = Bottle.objects.filter(user=user)
-    total_bottles = 0
+    # Calcula o total de garrafas usando AMBAS as fontes
+    bottles_from_bottle = Bottle.objects.filter(user=user).aggregate(
+        total=models.Sum('quantity'))['total'] or 0
 
-    # Se houver registros de garrafas, somamos as quantidades
-    if bottles_query.exists():
-        total_sum = bottles_query.aggregate(total=models.Sum('quantity'))
-        total_bottles = total_sum['total'] or 0
+    bottles_from_history = RecyclingHistory.objects.filter(
+        user=user).aggregate(total=models.Sum('quantity'))['total'] or 0
 
-    # Se não encontrarmos garrafas no modelo Bottle, tentamos calcular a partir do histórico de reciclagem
-    if total_bottles == 0:
-        history_sum = RecyclingHistory.objects.filter(
-            user=user).aggregate(total=models.Sum('quantity'))
-        total_bottles = history_sum['total'] or 0
+    # Usa o maior valor entre as duas fontes para garantir precisão
+    total_bottles = max(bottles_from_bottle, bottles_from_history)
 
-    print(f"User {user.username}: Total bottles query result: {total_bottles}")
-    print(f"Bottles records count: {bottles_query.count()}")
-    if bottles_query.exists():
-        for bottle in bottles_query:
-            print(
-                f"Bottle record: type={bottle.type}, volume={bottle.volume}, quantity={bottle.quantity}, date={bottle.date}")
+    print(
+        f"User {user.username}: Bottles from Bottle model: {bottles_from_bottle}")
+    print(
+        f"User {user.username}: Bottles from RecyclingHistory: {bottles_from_history}")
+    print(f"User {user.username}: Total bottles counted: {total_bottles}")
 
     # Obtém maior quantidade de garrafas recicladas em um único mês
     monthly_max = RecyclingHistory.objects.filter(

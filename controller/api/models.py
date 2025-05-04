@@ -94,6 +94,9 @@ class Model3D(models.Model):
     description = models.TextField()
     likes = models.IntegerField(default=0)
     downloads = models.IntegerField(default=0)
+    price = models.IntegerField(default=0)  # Preço em moedas de reciclagem
+    # Indica se o modelo é gratuito
+    is_free = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name

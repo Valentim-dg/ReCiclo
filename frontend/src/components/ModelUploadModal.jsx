@@ -10,6 +10,8 @@ const ModelUploadModal = ({ closeModal, user, setModels, fetchModels }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [isFree, setIsFree] = useState(true);
+  const [price, setPrice] = useState(0);
 
   // Obtém o token correto do localStorage
   const token = localStorage.getItem("authToken");
@@ -32,6 +34,11 @@ const ModelUploadModal = ({ closeModal, user, setModels, fetchModels }) => {
     setImages((prevImages) => prevImages.filter((_, i) => i !== index));
   };
 
+  const handlePriceChange = (e) => {
+    const value = parseInt(e.target.value) || 0;
+    setPrice(value < 0 ? 0 : value);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -49,10 +56,17 @@ const ModelUploadModal = ({ closeModal, user, setModels, fetchModels }) => {
       return;
     }
 
+    if (!isFree && price <= 0) {
+      setError("Para modelos pagos, o preço deve ser maior que zero.");
+      return;
+    }
+
     setLoading(true);
     const formData = new FormData();
     formData.append("name", name);
     formData.append("description", description);
+    formData.append("is_free", isFree);
+    formData.append("price", isFree ? 0 : price);
 
     // Adiciona múltiplos arquivos ao FormData
     files.forEach((file) => {
@@ -163,6 +177,64 @@ const ModelUploadModal = ({ closeModal, user, setModels, fetchModels }) => {
               required
               disabled={loading || success}
             />
+          </div>
+
+          {/* Seção de Preço */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Precificação
+            </label>
+            <div className="flex items-center mb-2">
+              <input
+                type="radio"
+                id="free"
+                name="pricing"
+                checked={isFree}
+                onChange={() => setIsFree(true)}
+                disabled={loading || success}
+                className="mr-2"
+              />
+              <label htmlFor="free" className="text-sm text-gray-700">
+                Gratuito
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="radio"
+                id="paid"
+                name="pricing"
+                checked={!isFree}
+                onChange={() => setIsFree(false)}
+                disabled={loading || success}
+                className="mr-2"
+              />
+              <label htmlFor="paid" className="text-sm text-gray-700">
+                Pago
+              </label>
+            </div>
+
+            {/* Campo de preço (visível apenas se não for gratuito) */}
+            {!isFree && (
+              <div className="mt-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Preço (moedas de reciclagem)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  className="mt-1 p-2 border rounded w-full"
+                  value={price}
+                  onChange={handlePriceChange}
+                  required={!isFree}
+                  disabled={loading || success}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Define o valor em moedas de reciclagem necessário para baixar
+                  este modelo.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Upload de Múltiplos Arquivos STL */}

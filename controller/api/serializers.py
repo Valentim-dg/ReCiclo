@@ -28,6 +28,15 @@ class UserSerializer(serializers.ModelSerializer):
         return "/default-avatar.png"
 
 
+class UserSimpleSerializer(serializers.ModelSerializer):
+    handle = serializers.CharField(source='username')
+    image = serializers.ImageField(source='profile_image')
+
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'handle', 'image']
+
+
 class BottleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bottle
@@ -47,22 +56,29 @@ class ModelImageSerializer(serializers.ModelSerializer):
 
 
 class Model3DSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
-    file = serializers.FileField(write_only=True)
+    user = UserSimpleSerializer(read_only=True)
     images = ModelImageSerializer(many=True, read_only=True)
-    # Adiciona para permitir upload
-    image = serializers.ImageField(write_only=True, required=False)
-
+    files = ModelFileSerializer(many=True, read_only=True)
     is_liked = serializers.SerializerMethodField()
     is_saved = serializers.SerializerMethodField()
 
-    likes = serializers.IntegerField(read_only=True)
-    downloads = serializers.IntegerField(read_only=True)
-
     class Meta:
         model = Model3D
-        fields = ["id", "user", "name", "description", "likes",
-                  "downloads", "file", "image", "images", "is_liked", "is_saved"]
+        fields = ['id', 'name', 'description', 'user', 'date', 'likes',
+                  'downloads', 'images', 'files', 'is_liked', 'is_saved',
+                  'price', 'is_free']
+
+    def get_is_liked(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.modellike_set.filter(user=request.user).exists()
+        return False
+
+    def get_is_saved(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.modelfavorite_set.filter(user=request.user).exists()
+        return False
 
     def create(self, validated_data):
         print("Criando novo modelo 3D:", validated_data["name"])  # Depuração

@@ -99,14 +99,76 @@ class Model3DViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def download(self, request, pk=None):
-        """Registra um download e envia o arquivo do modelo para o usuário autenticado."""
+        """Verifica se o usuário pode baixar o modelo e registra o download."""
+        user = request.user
         model = get_object_or_404(Model3D, pk=pk)
-        model.downloads += 1
-        model.save()
 
-        response = FileResponse(model.file.open(
-            'rb'), as_attachment=True, filename=model.file.name)
-        return response
+        # Se o modelo for gratuito, permite o download
+        if model.is_free:
+            model.downloads += 1
+            model.save()
+
+            # Retorna o primeiro arquivo do modelo
+            # Na vida real, você provavelmente precisaria lidar com múltiplos arquivos
+            try:
+                model_file = model.files.first()
+                if not model_file:
+                    return Response(
+                        {"error": "Este modelo não possui arquivos para download."},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                response = FileResponse(
+                    model_file.file.open('rb'),
+                    as_attachment=True,
+                    filename=model_file.file_name
+                )
+                return response
+            except Exception as e:
+                return Response(
+                    {"error": f"Erro ao processar download: {str(e)}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        else:
+            # Verificar se o usuário tem moedas de reciclagem suficientes
+            if user.recycling_coins < model.price:
+                return Response(
+                    {"error": f"Você não possui moedas de reciclagem suficientes. Necessário: {model.price}"},
+                    status=status.HTTP_402_PAYMENT_REQUIRED
+                )
+
+            # Debitar as moedas do usuário
+            user.recycling_coins -= model.price
+            user.save()
+
+            # Incrementar downloads
+            model.downloads += 1
+            model.save()
+
+            # Retorna o primeiro arquivo do modelo
+            try:
+                model_file = model.files.first()
+                if not model_file:
+                    return Response(
+                        {"error": "Este modelo não possui arquivos para download."},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                response = FileResponse(
+                    model_file.file.open('rb'),
+                    as_attachment=True,
+                    filename=model_file.file_name
+                )
+                return response
+            except Exception as e:
+                # Em caso de erro, devolver as moedas ao usuário
+                user.recycling_coins += model.price
+                user.save()
+
+                return Response(
+                    {"error": f"Erro ao processar download: {str(e)}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
 
 class CommentViewSet(viewsets.ModelViewSet):

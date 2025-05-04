@@ -29,6 +29,8 @@ const Home = forwardRef(
           downloads: model.downloads || 0,
           isLiked: model.is_liked,
           isSaved: model.is_saved,
+          price: model.price,
+          isFree: model.is_free,
         }));
 
         setLocalModels(transformedData);
@@ -36,7 +38,6 @@ const Home = forwardRef(
       },
     }));
 
-    // Esta função transforma os dados do modelo para o formato necessário
     const transformModelsData = (modelsData) => {
       return modelsData.map((model) => ({
         id: model.id,
@@ -50,6 +51,8 @@ const Home = forwardRef(
         downloads: model.downloads || 0,
         isLiked: model.is_liked,
         isSaved: model.is_saved,
+        price: model.price,
+        isFree: model.is_free,
       }));
     };
 
@@ -58,11 +61,9 @@ const Home = forwardRef(
       const loadModels = async () => {
         setIsLoading(true);
         try {
-          // Verifica se já temos modelos iniciais
           if (initialModels && initialModels.length > 0) {
             setLocalModels(transformModelsData(initialModels));
           } else {
-            // Caso contrário, busca do servidor
             const fetchedModels = await fetchModels();
             setLocalModels(transformModelsData(fetchedModels));
           }
@@ -74,7 +75,6 @@ const Home = forwardRef(
       };
 
       loadModels();
-      // A dependência é apenas o array initialModels, não a função fetchModels
     }, [initialModels]);
 
     const handleLike = async (id) => {

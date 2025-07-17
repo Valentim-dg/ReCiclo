@@ -1,3 +1,71 @@
+# Ficheiro .gitignore para o projeto ReCiclo (Django + React)
+
+# --- Ficheiros e Pastas Específicos do Projeto ---
+# Ignora ficheiros de anotações pessoais ou temporários.
 INFORMAÇÕES.txt
-/controller/media/models3d/
-/controller/models3d/
+
+# --- Python / Django ---
+
+# Ambientes Virtuais
+# Ignora as pastas de ambiente virtual para não enviar as bibliotecas instaladas.
+env/
+venv/
+.venv/
+
+# Ficheiros compilados do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Banco de Dados
+# Ignora o ficheiro do banco de dados SQLite para evitar conflitos.
+db.sqlite3
+*.sqlite3
+
+# Ficheiros de Média (Uploads dos Utilizadores)
+# Esta pasta contém todos os uploads, como imagens de perfil e ficheiros de modelos 3D.
+# Nunca deve ser versionada, pois o seu conteúdo é dinâmico e pode ser muito grande.
+C:\Users\valen\Documents\IFSUL\TCC\controller\media
+
+# Ficheiros Estáticos Coletados
+# A pasta para onde o Django copia todos os ficheiros estáticos com o comando 'collectstatic'.
+/staticfiles/
+
+# Ficheiros de Ambiente
+# Ignora ficheiros que contêm variáveis de ambiente e segredos (como chaves de API).
+.env
+.env.*
+!.env.example
+
+# Ficheiros de Log
+*.log
+logs/
+
+# --- Node.js / React (para o seu frontend) ---
+
+# Pasta de dependências
+# Contém todas as bibliotecas do Node.js e pode ser muito pesada.
+# Deve ser sempre reconstruída com 'npm install'.
+/frontend/node_modules/
+
+# Pasta de build
+# Contém a versão final e compilada do seu site React.
+/frontend/build/
+
+# Ficheiros de log do npm e yarn
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ficheiros de ambiente do frontend
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# --- Configurações de IDEs e Editores ---
+.idea/
+.vscode/
+*.swp
+*~

@@ -1,44 +1,52 @@
 # Ficheiro .gitignore para o projeto ReCiclo (Django + React)
 
 # --- Ficheiros e Pastas Específicos do Projeto ---
-# Ignora ficheiros de anotações pessoais ou temporários.
+# Ignora ficheiros de anotações pessoais ou temporários que não pertencem ao repositório.
 INFORMAÇÕES.txt
 
 # --- Python / Django ---
 
 # Ambientes Virtuais
 # Ignora as pastas de ambiente virtual para não enviar as bibliotecas instaladas.
+# Cada membro da equipa deve gerir o seu próprio ambiente.
 env/
 venv/
 .venv/
 
 # Ficheiros compilados do Python
-__pycache__/
+# Estes ficheiros são gerados automaticamente pelo interpretador Python.
+migrations/
+__pycache__
 *.pyc
 *.pyo
 *.pyd
 
+
 # Banco de Dados
-# Ignora o ficheiro do banco de dados SQLite para evitar conflitos.
+# Ignora o ficheiro do banco de dados SQLite para evitar conflitos de dados
+# entre diferentes ambientes de desenvolvimento.
 db.sqlite3
 *.sqlite3
 
 # Ficheiros de Média (Uploads dos Utilizadores)
 # Esta pasta contém todos os uploads, como imagens de perfil e ficheiros de modelos 3D.
 # Nunca deve ser versionada, pois o seu conteúdo é dinâmico e pode ser muito grande.
-C:\Users\valen\Documents\IFSUL\TCC\controller\media
+media/
 
 # Ficheiros Estáticos Coletados
 # A pasta para onde o Django copia todos os ficheiros estáticos com o comando 'collectstatic'.
-/staticfiles/
+# Esta pasta é gerada para o deploy e não deve estar no controlo de versão.
+staticfiles/
 
 # Ficheiros de Ambiente
 # Ignora ficheiros que contêm variáveis de ambiente e segredos (como chaves de API).
+# O ficheiro .env.example (se existir) é a única exceção, pois serve como um modelo.
 .env
 .env.*
 !.env.example
 
 # Ficheiros de Log
+# Ficheiros de log gerados pela aplicação.
 *.log
 logs/
 
@@ -46,11 +54,11 @@ logs/
 
 # Pasta de dependências
 # Contém todas as bibliotecas do Node.js e pode ser muito pesada.
-# Deve ser sempre reconstruída com 'npm install'.
+# Deve ser sempre reconstruída com 'npm install' ou 'yarn install'.
 /frontend/node_modules/
 
 # Pasta de build
-# Contém a versão final e compilada do seu site React.
+# Contém a versão final e compilada do seu site React, gerada para o deploy.
 /frontend/build/
 
 # Ficheiros de log do npm e yarn
@@ -65,6 +73,7 @@ yarn-error.log*
 .env.production.local
 
 # --- Configurações de IDEs e Editores ---
+# Ignora ficheiros e pastas de configuração específicos de editores de código.
 .idea/
 .vscode/
 *.swp

@@ -1,57 +1,74 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { X, Plus, Trash2, CheckCircle } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { toast } from "react-toastify";
+import { X, Plus, Trash2, CheckCircle, Loader2 } from "lucide-react";
 
-const ModelUploadModal = ({ closeModal, user, setModels, fetchModels }) => {
+/**
+ * Componente ModelUploadModal
+ * Renderiza um modal com um formulário completo para o utilizador fazer o upload
+ * de um novo modelo 3D, incluindo detalhes, ficheiros de modelo e imagens.
+ * @param {{
+ * closeModal: () => void,
+ * onUploadSuccess: () => void
+ * }} props - As propriedades do componente.
+ * @param {() => void} props.closeModal - Função para fechar o modal.
+ * @param {() => void} props.onUploadSuccess - Função de callback para notificar o componente pai que um upload foi bem-sucedido, para que a lista de modelos possa ser atualizada.
+ */
+const ModelUploadModal = ({ closeModal, onUploadSuccess }) => {
+  const { user } = useAuth();
+
+  // Estados para controlar os campos do formulário
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState([]);
   const [images, setImages] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
   const [isFree, setIsFree] = useState(true);
   const [price, setPrice] = useState(0);
 
-  // Obtém o token correto do localStorage
-  const token = localStorage.getItem("authToken");
+  // Estados para controlar a UI do modal
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
   const handleFilesChange = (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    setFiles((prevFiles) => [...prevFiles, ...selectedFiles]);
+    setFiles((prev) => [...prev, ...Array.from(e.target.files)]);
   };
 
   const handleImagesChange = (e) => {
-    const selectedImages = Array.from(e.target.files);
-    setImages((prevImages) => [...prevImages, ...selectedImages]);
+    setImages((prev) => [...prev, ...Array.from(e.target.files)]);
   };
 
   const removeFile = (index) => {
-    setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const removeImage = (index) => {
-    setImages((prevImages) => prevImages.filter((_, i) => i !== index));
+    setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handlePriceChange = (e) => {
-    const value = parseInt(e.target.value) || 0;
+    const value = parseInt(e.target.value, 10) || 0;
     setPrice(value < 0 ? 0 : value);
   };
 
+  /**
+   * Lida com a submissão do formulário.
+   * Valida os dados, monta o FormData e envia para a API.
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess(false);
 
-    if (!user || !token) {
+    if (!user) {
       setError("Você precisa estar logado para enviar um modelo.");
       return;
     }
 
     if (!name || !description || files.length === 0 || images.length === 0) {
       setError(
-        "Preencha todos os campos e envie pelo menos um arquivo e uma imagem."
+        "Preencha todos os campos e envie pelo menos um ficheiro e uma imagem."
       );
       return;
     }
@@ -61,96 +78,70 @@ const ModelUploadModal = ({ closeModal, user, setModels, fetchModels }) => {
       return;
     }
 
-    setLoading(true);
+    setIsSubmitting(true);
+
+    // FormData é necessário para enviar ficheiros para a API.
     const formData = new FormData();
     formData.append("name", name);
     formData.append("description", description);
     formData.append("is_free", isFree);
     formData.append("price", isFree ? 0 : price);
+    files.forEach((file) => formData.append("file", file));
+    images.forEach((image) => formData.append("image", image));
 
-    // Adiciona múltiplos arquivos ao FormData
-    files.forEach((file) => {
-      formData.append("file", file);
-    });
-
-    // Adiciona múltiplas imagens ao FormData
-    images.forEach((image) => {
-      formData.append("image", image);
-    });
+    const token = localStorage.getItem("authToken");
 
     try {
-      const response = await axios.post(
-        "http://127.0.0.1:8000/api/models3d/",
-        formData,
-        {
-          headers: {
-            Authorization: `Token ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      await axios.post("http://127.0.0.1:8000/api/models3d/upload/", formData, {
+        headers: {
+          Authorization: `Token ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
-      // Mostrar mensagem de sucesso
       setSuccess(true);
+      toast.success("Modelo enviado com sucesso!");
 
-      // Atualizar a lista de modelos
-      if (typeof fetchModels === "function") {
-        // Se temos uma função para buscar modelos do servidor, usamos ela
-        await fetchModels(); // Esta é a linha chave que atualiza os modelos
-      } else if (typeof setModels === "function") {
-        // Caso contrário, tentamos atualizar o estado local
-        setModels((prevModels) => [response.data, ...prevModels]);
+      if (typeof onUploadSuccess === "function") {
+        onUploadSuccess();
       }
 
-      // Fechar o modal após 1.5 segundos para mostrar a mensagem de sucesso
       setTimeout(() => {
         closeModal();
       }, 1500);
-    } catch (error) {
-      console.error("Erro ao enviar modelo:", error);
-      let errorMessage = "Erro ao enviar modelo.";
-
-      if (error.response && error.response.data) {
-        console.log("Resposta de erro:", error.response.data);
-        if (error.response.data.error) {
-          errorMessage = error.response.data.error;
-        } else if (error.response.data.file) {
-          errorMessage = error.response.data.file[0];
-        }
-      }
-
+    } catch (err) {
+      console.error("Erro ao enviar modelo:", err.response?.data);
+      const errorMessage =
+        err.response?.data?.error ||
+        "Erro ao enviar modelo. Verifique os ficheiros e tente novamente.";
       setError(errorMessage);
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
       <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center border-b pb-3">
           <h2 className="text-lg font-semibold">Adicionar Modelo 3D</h2>
-          <button onClick={closeModal} disabled={loading}>
-            <X size={20} className="text-gray-600 hover:text-gray-800" />
+          <button onClick={closeModal} disabled={isSubmitting}>
+            <X size={20} />
           </button>
         </div>
 
-        {/* Mensagem de erro */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mt-3">
-            <p className="text-sm">{error}</p>
+          <div className="bg-red-100 text-red-700 p-3 rounded mt-4 text-sm">
+            {error}
           </div>
         )}
-
-        {/* Mensagem de sucesso */}
         {success && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mt-3 flex items-center">
-            <CheckCircle size={18} className="mr-2" />
-            <p className="text-sm">Modelo enviado com sucesso!</p>
+          <div className="bg-green-100 text-green-700 p-3 rounded mt-4 text-sm flex items-center gap-2">
+            <CheckCircle size={18} /> Modelo enviado com sucesso!
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-4">
+        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div className="mb-3">
             <label className="block text-sm font-medium text-gray-700">
               Nome do Modelo
@@ -161,7 +152,7 @@ const ModelUploadModal = ({ closeModal, user, setModels, fetchModels }) => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              disabled={loading || success}
+              disabled={isSubmitting || success}
             />
           </div>
 
@@ -175,11 +166,10 @@ const ModelUploadModal = ({ closeModal, user, setModels, fetchModels }) => {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
-              disabled={loading || success}
+              disabled={isSubmitting || success}
             />
           </div>
 
-          {/* Seção de Preço */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Precificação
@@ -191,7 +181,7 @@ const ModelUploadModal = ({ closeModal, user, setModels, fetchModels }) => {
                 name="pricing"
                 checked={isFree}
                 onChange={() => setIsFree(true)}
-                disabled={loading || success}
+                disabled={isSubmitting || success}
                 className="mr-2"
               />
               <label htmlFor="free" className="text-sm text-gray-700">
@@ -205,15 +195,13 @@ const ModelUploadModal = ({ closeModal, user, setModels, fetchModels }) => {
                 name="pricing"
                 checked={!isFree}
                 onChange={() => setIsFree(false)}
-                disabled={loading || success}
+                disabled={isSubmitting || success}
                 className="mr-2"
               />
               <label htmlFor="paid" className="text-sm text-gray-700">
                 Pago
               </label>
             </div>
-
-            {/* Campo de preço (visível apenas se não for gratuito) */}
             {!isFree && (
               <div className="mt-2">
                 <label className="block text-sm font-medium text-gray-700">
@@ -227,7 +215,7 @@ const ModelUploadModal = ({ closeModal, user, setModels, fetchModels }) => {
                   value={price}
                   onChange={handlePriceChange}
                   required={!isFree}
-                  disabled={loading || success}
+                  disabled={isSubmitting || success}
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Define o valor em moedas de reciclagem necessário para baixar
@@ -237,35 +225,32 @@ const ModelUploadModal = ({ closeModal, user, setModels, fetchModels }) => {
             )}
           </div>
 
-          {/* Upload de Múltiplos Arquivos STL */}
           <div className="mb-3">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Arquivos STL <span className="text-red-500">*</span>
+              Ficheiros STL <span className="text-red-500">*</span>
             </label>
             <div className="flex items-center">
               <label
                 className={`cursor-pointer bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-2 rounded flex items-center ${
-                  loading || success ? "opacity-50 cursor-not-allowed" : ""
+                  isSubmitting || success ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               >
                 <Plus size={16} className="mr-1" />
-                Adicionar arquivos
+                Adicionar ficheiros
                 <input
                   type="file"
                   accept=".stl"
                   onChange={handleFilesChange}
                   className="hidden"
                   multiple
-                  disabled={loading || success}
+                  disabled={isSubmitting || success}
                 />
               </label>
             </div>
-
-            {/* Lista de arquivos selecionados */}
             {files.length > 0 && (
               <div className="mt-2">
                 <p className="text-sm font-medium text-gray-700">
-                  Arquivos selecionados:
+                  Ficheiros selecionados:
                 </p>
                 <ul className="mt-1 space-y-1">
                   {files.map((file, index) => (
@@ -274,7 +259,7 @@ const ModelUploadModal = ({ closeModal, user, setModels, fetchModels }) => {
                       className="flex justify-between items-center text-sm bg-gray-50 p-2 rounded"
                     >
                       <span className="truncate">{file.name}</span>
-                      {!loading && !success && (
+                      {!isSubmitting && !success && (
                         <button
                           type="button"
                           onClick={() => removeFile(index)}
@@ -290,7 +275,6 @@ const ModelUploadModal = ({ closeModal, user, setModels, fetchModels }) => {
             )}
           </div>
 
-          {/* Upload de Múltiplas Imagens */}
           <div className="mb-3">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Imagens do Modelo <span className="text-red-500">*</span>
@@ -298,7 +282,7 @@ const ModelUploadModal = ({ closeModal, user, setModels, fetchModels }) => {
             <div className="flex items-center">
               <label
                 className={`cursor-pointer bg-green-100 hover:bg-green-200 text-green-700 px-3 py-2 rounded flex items-center ${
-                  loading || success ? "opacity-50 cursor-not-allowed" : ""
+                  isSubmitting || success ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               >
                 <Plus size={16} className="mr-1" />
@@ -309,12 +293,10 @@ const ModelUploadModal = ({ closeModal, user, setModels, fetchModels }) => {
                   onChange={handleImagesChange}
                   className="hidden"
                   multiple
-                  disabled={loading || success}
+                  disabled={isSubmitting || success}
                 />
               </label>
             </div>
-
-            {/* Lista de imagens selecionadas */}
             {images.length > 0 && (
               <div className="mt-2">
                 <p className="text-sm font-medium text-gray-700">
@@ -327,7 +309,7 @@ const ModelUploadModal = ({ closeModal, user, setModels, fetchModels }) => {
                       className="flex justify-between items-center text-sm bg-gray-50 p-2 rounded"
                     >
                       <span className="truncate">{image.name}</span>
-                      {!loading && !success && (
+                      {!isSubmitting && !success && (
                         <button
                           type="button"
                           onClick={() => removeImage(index)}
@@ -345,41 +327,12 @@ const ModelUploadModal = ({ closeModal, user, setModels, fetchModels }) => {
 
           <button
             type="submit"
-            className={`w-full mt-4 py-2 rounded transition ${
-              success
-                ? "bg-green-600 text-white"
-                : "bg-indigo-600 text-white hover:bg-indigo-700"
-            }`}
-            disabled={loading || success}
+            disabled={isSubmitting || success}
+            className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-400"
           >
-            {loading ? (
+            {isSubmitting ? (
               <span className="flex items-center justify-center">
-                <svg
-                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Enviando...
-              </span>
-            ) : success ? (
-              <span className="flex items-center justify-center">
-                <CheckCircle size={18} className="mr-2" />
-                Enviado com Sucesso
+                <Loader2 className="animate-spin mr-2" /> A Enviar...
               </span>
             ) : (
               "Enviar Modelo"

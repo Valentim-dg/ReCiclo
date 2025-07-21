@@ -1,6 +1,21 @@
 import React from "react";
 import { Heart, Download, BookmarkPlus, BookmarkCheck } from "lucide-react";
+import { Link } from "react-router-dom";
+import Avatar from "./ui/Avatar";
 
+/**
+ * Componente ModelCard
+ * Exibe um "card" de pré-visualização para um único modelo 3D em um grid.
+ * Mostra a imagem principal, nome, autor e ações como Curtir e Salvar.
+ * @param {{
+ * model: object,
+ * onLike: (id: number) => void,
+ * onSave: (id: number) => void
+ * }} props - As propriedades do componente.
+ * @param {object} props.model - O objeto do modelo 3D, já transformado para uso na UI.
+ * @param {(id: number) => void} props.onLike - Função de callback para ser executada ao clicar no botão de Curtir.
+ * @param {(id: number) => void} props.onSave - Função de callback para ser executada ao clicar no botão de Salvar.
+ */
 const ModelCard = ({ model, onLike, onSave }) => {
   const {
     id,
@@ -16,70 +31,76 @@ const ModelCard = ({ model, onLike, onSave }) => {
     isFree,
   } = model;
 
-  // Determine the price display text based on what data we have
-  const isPriceDisplayFree = isFree === true;
-  const priceDisplay = isPriceDisplayFree ? "Gratuito" : `${price || 0} moedas`;
+  const priceDisplay = isFree ? "Gratuito" : `${price || 0} moedas`;
+
+  // Define as classes de estilo para o badge de preço
+  const priceBadgeStyles = isFree
+    ? "bg-green-100 text-green-800"
+    : "bg-blue-100 text-blue-800";
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-lg">
-      {/* Imagem do modelo */}
-      <div className="relative h-48 overflow-hidden">
-        <img
-          src={image}
-          alt={name}
-          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-        />
-
-        {/* Badge de preço */}
-        <div className="absolute top-2 right-2">
-          <span
-            className={`text-xs font-medium px-2 py-1 rounded ${
-              isPriceDisplayFree
-                ? "bg-green-100 text-green-800"
-                : "bg-blue-100 text-blue-800"
-            }`}
-          >
-            {priceDisplay}
-          </span>
-        </div>
-      </div>
-
-      {/* Informações do modelo */}
-      <div className="p-4">
-        <div className="flex items-center mb-2">
+    <div className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl group">
+      <Link to={`/models/${id}`} className="block">
+        <div className="relative h-48 overflow-hidden">
           <img
-            src={userImage}
-            alt={userName}
-            className="w-6 h-6 rounded-full mr-2"
+            src={image}
+            alt={name}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
-          <span className="text-sm text-gray-600">{userName}</span>
+          <div className="absolute top-2 right-2">
+            <span
+              className={`text-xs font-medium px-2 py-1 rounded ${priceBadgeStyles}`}
+            >
+              {priceDisplay}
+            </span>
+          </div>
+        </div>
+      </Link>
+
+      <div className="p-4">
+        <div className="flex items-center mb-2 gap-2">
+          <Avatar src={userImage} alt={userName} sizeClasses="w-8 h-8" />
+          <span className="text-sm text-gray-600 truncate">{userName}</span>
         </div>
 
-        <h3 className="font-medium text-gray-800 truncate">{name}</h3>
+        <Link to={`/models/${id}`} className="block">
+          <h3 className="font-medium text-gray-800 truncate hover:text-blue-600 transition-colors">
+            {name}
+          </h3>
+        </Link>
 
-        {/* Botões de ação */}
         <div className="flex items-center justify-between mt-3">
           <div className="flex items-center space-x-3">
             <button
-              onClick={() => onLike(id)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onLike(id);
+              }}
               className="flex items-center text-gray-500 hover:text-red-500 transition-colors"
+              aria-label="Curtir"
             >
               <Heart
                 size={18}
                 className={isLiked ? "fill-red-500 text-red-500" : ""}
               />
-              <span className="ml-1 text-xs">{likes}</span>
+              <span className="ml-1 text-xs font-medium">{likes}</span>
             </button>
 
-            <div className="flex items-center text-gray-500">
+            <div className="flex items-center text-gray-500" title="Downloads">
               <Download size={18} />
-              <span className="ml-1 text-xs">{downloads}</span>
+              <span className="ml-1 text-xs font-medium">{downloads}</span>
             </div>
           </div>
 
           <button
-            onClick={() => onSave(id)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onSave(id);
+            }}
             className="text-gray-500 hover:text-indigo-600 transition-colors"
+            aria-label="Salvar"
           >
             {isSaved ? (
               <BookmarkCheck

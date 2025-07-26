@@ -16,11 +16,11 @@ venv/
 # Ficheiros compilados do Python
 # Estes ficheiros são gerados automaticamente pelo interpretador Python.
 migrations/
+migrations/__pycache__/
 __pycache__
 *.pyc
 *.pyo
 *.pyd
-
 
 # Banco de Dados
 # Ignora o ficheiro do banco de dados SQLite para evitar conflitos de dados
@@ -31,7 +31,7 @@ db.sqlite3
 # Ficheiros de Média (Uploads dos Utilizadores)
 # Esta pasta contém todos os uploads, como imagens de perfil e ficheiros de modelos 3D.
 # Nunca deve ser versionada, pois o seu conteúdo é dinâmico e pode ser muito grande.
-media/
+controller/media/
 
 # Ficheiros Estáticos Coletados
 # A pasta para onde o Django copia todos os ficheiros estáticos com o comando 'collectstatic'.
